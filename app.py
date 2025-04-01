@@ -1,71 +1,28 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-import os
-
-
-st.title("📈 Stock Price Predictor")
-ticker = st.text_input("Enter stock symbol (e.g., AAPL):")
-
-if st.button("Predict"):
-    stock_data = yf.download(ticker, period="5y")
-    st.line_chart(stock_data["Close"])
-
-
-# Train Model
-def train_model(df):
-    df = df[['Close']]
-    df['Target'] = df['Close'].shift(-30)
-    df.dropna(inplace=True)
-    
-    X = np.array(df.drop(columns=['Target']))
-    y = np.array(df['Target'])
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-    return model
-
-# Predict Future Prices
-def predict_future(df, model, days=30):
-    last_data = np.array(df[['Close']].tail(1))
-    future_predictions = []
-    future_dates = pd.date_range(df.index[-1], periods=days+1, freq='D')[1:]
-    
-    for _ in range(days):
-        pred = model.predict(last_data.reshape(1, -1))[0]
-        future_predictions.append(pred)
-        last_data = np.array([[pred]])
-    
-    return pd.DataFrame({"Date": future_dates, "Predicted Price": future_predictions})
-
-# Streamlit UI
-st.title("Stock Price Prediction (2024 & Beyond)")
+import plotly.express as px
+import joblib
+from fbprophet import Prophet
 
 # Load Data
-df = load_data()
-if df is not None:
-    st.write("Stock Data Overview:")
-    st.dataframe(df.head())
+st.title("📈 Stock Price Predictor")
+st.sidebar.header("Upload Stock Data")
 
-    
-    # Train Model
-    model = train_model(stock_data)
-    
-    # Predict Future Prices
-    st.write("### Future Predictions")
-    future_df = predict_future(stock_data, model, days=30)
-    st.write(future_df)
-    
+uploaded_file = st.sidebar.file_uploader("Upload CSV", type=['csv'])
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.write("### Raw Data", df.head())
+
+    # Preprocessing (Assuming Date column exists)
+    df['Date'] = pd.to_datetime(df['Date'])
+    df = df[['Date', 'Close']].rename(columns={'Date': 'ds', 'Close': 'y'})
+
+    # Train Prophet Model
+    model = Prophet()
+    model.fit(df)
+    future = model.make_future_dataframe(periods=365)
+    forecast = model.predict(future)
+
     # Plot results
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(stock_data.index[-100:], stock_data["Close"].tail(100), label="Actual Prices")
-    ax.plot(future_df["Date"], future_df["Predicted Price"], label="Predicted Prices", linestyle="dashed", color='red')
-    ax.set_title("Stock Prices: Actual vs Predicted")
-    ax.legend()
-    st.pyplot(fig)
+    fig = px.line(forecast, x='ds', y='yhat', title='Stock Price Prediction')
+    st.plotly_chart(fig)
