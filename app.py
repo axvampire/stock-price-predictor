@@ -11,13 +11,13 @@ import os
 @st.cache_data
 def load_data():
     file_path = "stock_data.csv"
-    
+
     if not os.path.exists(file_path):
         st.error("Error: 'stock_data.csv' not found!")
         return None
-    
+
     df = pd.read_csv(file_path)
-    
+
     # Handle missing 'Date' column
     if "Date" not in df.columns:
         st.warning("No 'Date' column found. Creating synthetic dates...")
@@ -26,7 +26,13 @@ def load_data():
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date")
     df.set_index("Date", inplace=True)
-    
+
+    # Drop non-numeric columns
+    non_numeric_cols = df.select_dtypes(exclude=["number"]).columns
+    if len(non_numeric_cols) > 0:
+        st.warning(f"Dropping non-numeric columns: {list(non_numeric_cols)}")
+        df = df.drop(columns=non_numeric_cols)
+
     return df
 
 
