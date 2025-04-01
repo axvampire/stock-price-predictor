@@ -10,6 +10,6 @@ This project is a simple Streamlit app that predicts stock prices using Linear R
 
 HOW TO RUN:
 
-<p>Access the link <a href="[[https://www.freecodecamp.org/learn](https://stock-price-predictor-4lgt.onrender.com)](https://stock-price-predictor-4lgt.onrender.com)" target="_blank">f</a></p>
+Access the link https://stock-price-predictor-4lgt.onrender.com
 
 Upload .csv file with stock market data from this repository (ACGL or AMZN) or download a dataset from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
