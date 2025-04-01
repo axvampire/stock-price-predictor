@@ -17,13 +17,13 @@ if uploaded_file:
     st.write("### Raw Data", df.head())
 
     # Ensure 'Date' is datetime and sort values
-    df['Date'] = pd.to_datetime(df['Date'])
+    df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('Date')
 
     # Selecting Features and Target
-    df['Days'] = (df['Date'] - df['Date'].min()).dt.days
-    X = df[['Days']]
-    y = df['Close']
+    df['days'] = (df['date'] - df['date'].min()).dt.days
+    X = df[['days']]
+    y = df['close']
 
     # Train Test Split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -37,9 +37,9 @@ if uploaded_file:
 
     # Plot Actual vs Predicted
     plt.figure(figsize=(10,5))
-    sns.lineplot(x=df['Date'], y=df['Close'], label="Actual")
-    sns.lineplot(x=df['Date'], y=df['Predicted'], label="Predicted")
-    plt.xlabel("Date")
+    sns.lineplot(x=df['date'], y=df['close'], label="Actual")
+    sns.lineplot(x=df['date'], y=df['Predicted'], label="Predicted")
+    plt.xlabel("date")
     plt.ylabel("Stock Price")
     plt.title("Stock Price Prediction")
     plt.legend()
