@@ -11,17 +11,24 @@ import os
 @st.cache_data
 def load_data():
     file_path = "stock_data.csv"
+    
     if not os.path.exists(file_path):
         st.error("Error: 'stock_data.csv' not found!")
         return None
+    
     df = pd.read_csv(file_path)
+    
+    # Handle missing 'Date' column
     if "Date" not in df.columns:
-        st.error("Error: Missing 'Date' column in CSV file.")
-        return None
+        st.warning("No 'Date' column found. Creating synthetic dates...")
+        df["Date"] = pd.date_range(start="2024-01-01", periods=len(df), freq="D")
+
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date")
     df.set_index("Date", inplace=True)
+    
     return df
+
 
 # Train Model
 def train_model(df):
