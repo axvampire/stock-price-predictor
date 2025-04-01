@@ -7,33 +7,13 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import os
 
-# Load stock data
-@st.cache_data
-def load_data():
-    file_path = "stock_data.csv"
 
-    if not os.path.exists(file_path):
-        st.error("Error: 'stock_data.csv' not found!")
-        return None
+st.title("📈 Stock Price Predictor")
+ticker = st.text_input("Enter stock symbol (e.g., AAPL):")
 
-    df = pd.read_csv(file_path)
-
-    # Handle missing 'Date' column
-    if "Date" not in df.columns:
-        st.warning("No 'Date' column found. Creating synthetic dates...")
-        df["Date"] = pd.date_range(start="2024-01-01", periods=len(df), freq="D")
-
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df = df.dropna(subset=["Date"]).sort_values("Date")
-    df.set_index("Date", inplace=True)
-
-    # Drop non-numeric columns
-    non_numeric_cols = df.select_dtypes(exclude=["number"]).columns
-    if len(non_numeric_cols) > 0:
-        st.warning(f"Dropping non-numeric columns: {list(non_numeric_cols)}")
-        df = df.drop(columns=non_numeric_cols)
-
-    return df
+if st.button("Predict"):
+    stock_data = yf.download(ticker, period="5y")
+    st.line_chart(stock_data["Close"])
 
 
 # Train Model
