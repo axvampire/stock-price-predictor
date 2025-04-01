@@ -18,7 +18,7 @@ if uploaded_file:
 
     # Ensure 'Date' is datetime and sort values
     df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('Date')
+    df = df.sort_values('date')
 
     # Selecting Features and Target
     df['days'] = (df['date'] - df['date'].min()).dt.days
