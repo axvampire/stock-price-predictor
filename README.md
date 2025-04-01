@@ -12,4 +12,4 @@ HOW TO RUN:
 
 Access the link: https://stock-price-predictor-4lgt.onrender.com
 
-Upload .csv file with stock or download a dataset from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
+Upload .csv file with stock market data from this repository or download a dataset from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
