@@ -5,36 +5,35 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
-class StockDataProcessor:
-    """Class to handle stock data preprocessing and column normalization."""
+class ColumnFormatter:
+    """
+    A helper class to standardize column names in a DataFrame.
+    Ensures that column names are case-insensitive and mapped to expected names.
+    """
+    DEFAULT_COLUMN_MAPPING = {
+        "date": "Date",
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume"
+    }
 
-    def __init__(self, df):
-        self.df = df
+    @staticmethod
+    def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Standardizes column names to match the expected format.
+        """
+        df = df.copy()
+        column_mapping = {col.lower(): col for col in df.columns}
+        
+        for expected, correct in ColumnFormatter.DEFAULT_COLUMN_MAPPING.items():
+            if expected in column_mapping:
+                df.rename(columns={column_mapping[expected]: correct}, inplace=True)
+        
+        return df
 
-    def standardize_columns(self):
-        """Standardizes column names to lowercase for consistency."""
-        self.df.columns = [col.lower() for col in self.df.columns]
-
-    def process_date_column(self):
-        """Finds and processes the date column, converting it to datetime format."""
-        possible_date_columns = ['date', 'Date', 'DATE']
-        for col in possible_date_columns:
-            if col.lower() in self.df.columns:
-                self.df.rename(columns={col.lower(): 'Date'}, inplace=True)
-                self.df['Date'] = pd.to_datetime(self.df['Date'])
-                return
-        raise ValueError("No recognizable 'Date' column found in the uploaded file.")
-
-    def prepare_data(self):
-        """Prepares the dataset for the Linear Regression model."""
-        self.standardize_columns()
-        self.process_date_column()
-        self.df = self.df.sort_values('Date')
-        self.df['Days'] = (self.df['Date'] - self.df['Date'].min()).dt.days
-        return self.df
-
-
-# Streamlit UI
+# Streamlit App Title
 st.title("📈 Stock Price Predictor")
 
 # Sidebar File Uploader
@@ -43,12 +42,14 @@ uploaded_file = st.sidebar.file_uploader("Upload your stock data file", type=['c
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    processor = StockDataProcessor(df)
-    df = processor.prepare_data()
+    st.write("### Raw Data", df.head())
 
-    st.write("### Processed Data", df.head())
+    # Ensure 'Date' is datetime and sort values
+    df['Date'] = pd.to_datetime(df['Date'])
+    df = df.sort_values('Date')
 
     # Selecting Features and Target
+    df['Days'] = (df['Date'] - df['Date'].min()).dt.days
     X = df[['Days']]
     y = df['Close']
 
