@@ -5,27 +5,40 @@ from sklearn.model_selection import train_test_split  # Import train_test_split
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-# Function to Load Data
+# Function to Load and Clean Data
 @st.cache_data
 def load_data():
     file_path = "stock_data.csv"
 
-    # Check if file exists
-    if not os.path.exists("https://github.com/axvampire/stock-price-predictor/edit/main/stock_data.csv"):
-        st.error("Error: 'stock_data.csv' not found!")
-        return None
-    
-    # Load Data
-    df = pd.read_csv("https://github.com/axvampire/stock-price-predictor/edit/main/stock_data.csv")
+    try:
+        # Load CSV
+        df = pd.read_csv(file_path)
 
-    # Check if 'Date' column exists
-    if "Date" not in df.columns:
-        st.error("Error: Missing 'Date' column in CSV file.")
-        return None
+        # Ensure 'Date' exists
+        if "Date" not in df.columns:
+            st.error("Error: Missing 'Date' column in CSV file.")
+            return None
 
-    df["Date"] = pd.to_datetime(df["Date"])  # Convert Date column to datetime
-    df.set_index("Date", inplace=True)  # Set Date as index
-    return df
+        # Handle NaN values in 'Date'
+        df = df.dropna(subset=["Date"])
+
+        # Ensure 'Date' column is string before conversion
+        df["Date"] = df["Date"].astype(str)
+
+        # Convert 'Date' column to datetime
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+
+        # Drop any remaining NaT (invalid date) values
+        df = df.dropna(subset=["Date"])
+
+        # Set Date as index
+        df.set_index("Date", inplace=True)
+
+        return df
+
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return None
 
 # Read stock data
 stock_data = load_data()
