@@ -6,12 +6,12 @@ from sklearn.linear_model import LinearRegression
 import numpy as np
 
 # App Title
-st.title("📈 Stock Price Prediction (Using Local CSV)")
+st.title("📈 Stock Price Prediction")
 
 # Load the dataset
 @st.cache_data
 def load_data():
-    df = pd.read_csv("stock_data.csv", parse_dates=["Date"], index_col="Date")
+    df = pd.read_csv("stock_data.csv")
     return df
 
 # Read stock data
