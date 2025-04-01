@@ -48,10 +48,11 @@ def predict_future(df, model, days=30):
 st.title("Stock Price Prediction (2024 & Beyond)")
 
 # Load Data
-stock_data = load_data()
-if stock_data is not None:
-    st.write("### Recent Stock Data (End of 2024)")
-    st.line_chart(stock_data["Close"].tail(100))
+df = load_data()
+if df is not None:
+    st.write("Stock Data Overview:")
+    st.dataframe(df.head())
+
     
     # Train Model
     model = train_model(stock_data)
