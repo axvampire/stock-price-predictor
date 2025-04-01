@@ -5,13 +5,26 @@ from sklearn.model_selection import train_test_split  # Import train_test_split
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-# App Title
-st.title("📈 Stock Price Prediction")
-
-# Load the dataset
+# Function to Load Data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("stock_data.csv")
+    file_path = "stock_data.csv"
+
+    # Check if file exists
+    if not os.path.exists("https://github.com/axvampire/stock-price-predictor/edit/main/stock_data.csv"):
+        st.error("Error: 'stock_data.csv' not found!")
+        return None
+    
+    # Load Data
+    df = pd.read_csv("https://github.com/axvampire/stock-price-predictor/edit/main/stock_data.csv")
+
+    # Check if 'Date' column exists
+    if "Date" not in df.columns:
+        st.error("Error: Missing 'Date' column in CSV file.")
+        return None
+
+    df["Date"] = pd.to_datetime(df["Date"])  # Convert Date column to datetime
+    df.set_index("Date", inplace=True)  # Set Date as index
     return df
 
 # Read stock data
