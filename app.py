@@ -5,6 +5,34 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
+class StockDataProcessor:
+# Class to handle stock data preprocessing and column normalization
+
+    def __init__(self, df):
+        self.df = df
+
+    def standardize_columns(self):
+# Standardizes column names to lowercase for consistency
+        self.df.columns = [col.lower() for col in self.df.columns]
+
+    def process_date_column(self):
+# Finds and processes the date column, converting it to datetime format
+        possible_date_columns = ['date', 'Date', 'DATE']
+        for col in possible_date_columns:
+            if col.lower() in self.df.columns:
+                self.df.rename(columns={col.lower(): 'Date'}, inplace=True)
+                self.df['Date'] = pd.to_datetime(self.df['Date'])
+                return
+        raise ValueError("No recognizable 'Date' column found in the uploaded file.")
+
+    def prepare_data(self):
+  # Prepares the dataset for the Linear Regression model
+        self.standardize_columns()
+        self.process_date_column()
+        self.df = self.df.sort_values('Date')
+        self.df['Days'] = (self.df['Date'] - self.df['Date'].min()).dt.days
+        return self.df
+
 # Streamlit App Title
 st.title("📈 Stock Price Predictor")
 
