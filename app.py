@@ -1,74 +1,71 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.linear_model import LinearRegression
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
-class ColumnFormatter:
-    """
-    A helper class to standardize column names in a DataFrame.
-    Ensures that column names are case-insensitive and mapped to expected names.
-    """
-    DEFAULT_COLUMN_MAPPING = {
-        "date": "Date",
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume"
-    }
+# Streamlit UI
+st.title("📈 Stock Price Predictor (LSTM)")
 
-    @staticmethod
-    def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Standardizes column names to match the expected format.
-        """
-        df = df.copy()
-        column_mapping = {col.lower(): col for col in df.columns}
-        
-        for expected, correct in ColumnFormatter.DEFAULT_COLUMN_MAPPING.items():
-            if expected in column_mapping:
-                df.rename(columns={column_mapping[expected]: correct}, inplace=True)
-        
-        return df
-
-# Streamlit App Title
-st.title("📈 Stock Price Predictor")
-
-# Sidebar File Uploader
-st.sidebar.header("Upload Stock Data (CSV)")
-uploaded_file = st.sidebar.file_uploader("Upload your stock data file", type=['csv'])
+uploaded_file = st.sidebar.file_uploader("Upload Stock Data (CSV)", type=['csv'])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.write("### Raw Data", df.head())
-
-    # Ensure 'Date' is datetime and sort values
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df.sort_values('Date')
+    df.sort_values('Date', inplace=True)
 
-    # Selecting Features and Target
-    df['Days'] = (df['Date'] - df['Date'].min()).dt.days
-    X = df[['Days']]
-    y = df['Close']
+    # Display Raw Data
+    st.subheader("Raw Data")
+    st.write(df.head())
 
-    # Train Test Split
+    # Select closing prices
+    data = df[['Close']].values  # Only use 'Close' price for prediction
+
+    # Normalize the data
+    scaler = MinMaxScaler(feature_range=(0,1))
+    data_scaled = scaler.fit_transform(data)
+
+    # Create sequences (lookback = 60 days)
+    def create_sequences(data, lookback=60):
+        X, y = [], []
+        for i in range(len(data) - lookback):
+            X.append(data[i:i+lookback])
+            y.append(data[i+lookback])
+        return np.array(X), np.array(y)
+
+    lookback = 60  # Use past 60 days to predict next day
+    X, y = create_sequences(data_scaled, lookback)
+
+    # Split into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Train Linear Regression Model
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+    # Build LSTM model
+    model = Sequential([
+        LSTM(50, return_sequences=True, input_shape=(lookback, 1)),
+        LSTM(50, return_sequences=False),
+        Dense(25),
+        Dense(1)
+    ])
 
-    # Predict Future Prices
-    df['Predicted'] = model.predict(X)
+    model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Plot Actual vs Predicted
-    plt.figure(figsize=(10,5))
-    sns.lineplot(x=df['Date'], y=df['Close'], label="Actual")
-    sns.lineplot(x=df['Date'], y=df['Predicted'], label="Predicted")
-    plt.xlabel("Date")
-    plt.ylabel("Stock Price")
-    plt.title("Stock Price Prediction")
-    plt.legend()
-    st.pyplot(plt)
+    # Train the model
+    st.text("Training the LSTM model... (This may take a while)")
+    model.fit(X_train, y_train, epochs=10, batch_size=16, verbose=0)
+
+    # Make predictions
+    predictions = model.predict(X_test)
+    predictions = scaler.inverse_transform(predictions)  # Convert back to original scale
+
+    # Prepare the actual values for comparison
+    actual_prices = scaler.inverse_transform(y_test.reshape(-1,1))
+
+    # Plot results
+    st.subheader("Stock Price Prediction")
+    fig, ax = plt.subplots(figsize=(10,5))
+    ax.plot(actual_prices, label="Actual Prices", color='blue')
+    ax.plot(predictions, label="Predicted Prices", color='
