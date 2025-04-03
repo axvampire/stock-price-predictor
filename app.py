@@ -68,4 +68,8 @@ if uploaded_file:
     st.subheader("Stock Price Prediction")
     fig, ax = plt.subplots(figsize=(10,5))
     ax.plot(actual_prices, label="Actual Prices", color='blue')
-    ax.plot(predictions, label="Predicted Prices", color='
+    ax.plot(predictions, label="Predicted Prices", color='orange')
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Stock Price")
+    ax.legend()
+    st.pyplot(fig)
