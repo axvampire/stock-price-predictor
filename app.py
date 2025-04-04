@@ -16,7 +16,7 @@ st.sidebar.header("🔧 Model Hyperparameters")
 lstm_units = st.sidebar.slider("LSTM Units", min_value=10, max_value=200, step=10, value=50)
 dropout_rate = st.sidebar.slider("Dropout Rate", min_value=0.0, max_value=0.5, step=0.05, value=0.2)
 epochs = st.sidebar.slider("Epochs", min_value=5, max_value=100, step=5, value=10)
-batch_size = st.sidebar.selectbox("Batch Size", [16, 32, 64, 128], index=1)
+batch_size = st.sidebar.selectbox("Batch Size", [16, 32, 64, 128], index=2)
 
 # Upload file
 uploaded_file = st.file_uploader("Upload Stock Data (CSV)", type=['csv'])
