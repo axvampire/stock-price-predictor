@@ -2,8 +2,11 @@
 This Streamlit app allows users to upload stock data (CSV) and uses Deep Learning (LSTM) to:
 
 -Train an LSTM model on stock data (Close, Volume, Open, High, Low prices)
+
 -Predict future stock prices & trading volume for 7, 15, 30, 90, or 180 days
+
 -Show predictions both as a graph & table
+
 -Let users fine-tune the model (LSTM units, dropout rate, epochs, batch size)
 
 **Features Overview:**
