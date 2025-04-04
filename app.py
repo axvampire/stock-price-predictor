@@ -12,7 +12,7 @@ st.title("📈 Stock Price Predictor (LSTM)")
 
 uploaded_file = st.sidebar.file_uploader("Upload Stock Data (CSV)", type=['csv'])
 
-# --- UI for Hyperparameter Tuning ---
+# UI for Hyperparameter Tuning
 st.sidebar.header("🔧 Model Settings")
 lstm_units = st.sidebar.slider("LSTM Units", min_value=32, max_value=256, value=64, step=16)
 dropout_rate = st.sidebar.slider("Dropout Rate", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
@@ -92,14 +92,10 @@ if uploaded_file:
     ax.legend()
     st.pyplot(fig)
 
-    # --- Future Prediction ---
+    # Future Prediction
 st.subheader(f"Future Stock Price Prediction for {forecast_days} Days")
 
 def predict_future(days=30):
-    if 'X_test' not in globals():
-        st.error("Error: Model not trained yet. Please upload data first.")
-        return None
-
     future_inputs = X_test[-1]  # Last known sequence
     future_predictions = []
 
@@ -109,10 +105,13 @@ def predict_future(days=30):
         future_inputs = next_pred_scaled
         future_predictions.append(next_pred[0])  # Predicts both Close & Volume
 
-    # Convert predictions back to actual values
-    future_predictions = scaler.inverse_transform(
-        np.concatenate([np.tile(X_test[-1, -1, :-1], (days, 1)), np.array(future_predictions)], axis=1)
-    )[:, [3, 4]]  # Get Close & Volume
+    # Convert predictions back to original scale
+    future_predictions = np.array(future_predictions)
+
+    # Ensure correct shape before inverse transformation
+    dummy_features = np.zeros((future_predictions.shape[0], len(feature_columns)))  # Create placeholder features
+    dummy_features[:, [3, 4]] = future_predictions  # Only insert Close & Volume
+    future_predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]  # Extract Close & Volume after inverse transform
 
     return future_predictions
 
