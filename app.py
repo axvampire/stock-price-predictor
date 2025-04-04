@@ -28,7 +28,7 @@ if uploaded_file:
 
     # Display Raw Data
     st.subheader("Raw Data")
-    st.write(df.head())
+    st.write(df.tail())
 
     # Select important features
     feature_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
