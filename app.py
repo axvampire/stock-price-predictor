@@ -17,7 +17,7 @@ st.sidebar.header("🔧 Model Settings")
 lstm_units = st.sidebar.slider("LSTM Units", min_value=32, max_value=256, value=64, step=16)
 dropout_rate = st.sidebar.slider("Dropout Rate", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
 epochs = st.sidebar.slider("Training Epochs", min_value=5, max_value=50, value=10, step=5)
-batch_size = st.sidebar.slider("Batch Size", min_value=8, max_value=64, value=48, step=8)
+batch_size = st.sidebar.slider("Batch Size", min_value=8, max_value=64, value=64, step=8)
 
 forecast_days = st.sidebar.radio("📅 Forecast Window", [7, 15, 30, 90, 180], index=2)
 
@@ -57,19 +57,19 @@ if uploaded_file:
 
     # Build an optimized LSTM model
     model = Sequential([
-        LSTM(lstm_units, return_sequences=True, input_shape=(lookback, len(feature_columns))),
-        Dropout(dropout_rate),
-        LSTM(lstm_units, return_sequences=False),
-        Dropout(dropout_rate),
-        Dense(50),
-        Dense(1)
+        LSTM(50, return_sequences=True, input_shape=(lookback, len(feature_columns))),
+        Dropout(0.2),
+        LSTM(50, return_sequences=False),
+        Dropout(0.2),
+        Dense(2)  # Predicts Close & Volume
     ])
+
 
     model.compile(optimizer='adam', loss='mean_squared_error')
 
     # Train the model
     st.text("Training the optimized LSTM model... (This may take a few minutes)")
-    model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=0)
+    model.fit(X_train, y_train, epochs=10, batch_size=64, verbose=1)
 
     # Make predictions
     predictions = model.predict(X_test)
