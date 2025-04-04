@@ -11,14 +11,14 @@ from datetime import timedelta
 # Streamlit UI
 st.title("📈 Stock Price Predictor (LSTM)")
 
-# User Configurable Hyperparameters
+# User configurable hyperparameters
 st.sidebar.header("🔧 Model Hyperparameters")
 lstm_units = st.sidebar.slider("LSTM Units", min_value=10, max_value=200, step=10, value=50)
 dropout_rate = st.sidebar.slider("Dropout Rate", min_value=0.0, max_value=0.5, step=0.05, value=0.2)
 epochs = st.sidebar.slider("Epochs", min_value=5, max_value=100, step=5, value=10)
 batch_size = st.sidebar.selectbox("Batch Size", [16, 32, 64, 128], index=1)
 
-# Upload File
+# Upload file
 uploaded_file = st.file_uploader("Upload Stock Data (CSV)", type=['csv'])
 
 if uploaded_file:
@@ -30,7 +30,7 @@ if uploaded_file:
     # Ensure correct column names
     df.columns = df.columns.str.lower()
     
-    # Select Features
+    # Select features
     feature_columns = ['open', 'high', 'low', 'close', 'volume']
     
     if not all(col in df.columns for col in feature_columns):
@@ -74,54 +74,47 @@ if uploaded_file:
     
     model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Train Model
+    # Train model
     model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
 
     # Make Predictions
     predictions = model.predict(X_test)
     
-    # Convert Predictions Back to Original Scale
+    # Convert predictions back to original scale
     dummy_features = np.zeros((len(predictions), len(feature_columns)))
     dummy_features[:, [3, 4]] = predictions  # Insert only Close & Volume
     predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]
 
-    # Convert y_test Back to Original Scale
+    # Convert y_test back to original scale
     dummy_features[:, [3, 4]] = y_test
     actual_prices = scaler.inverse_transform(dummy_features)[:, [3, 4]]
 
     # Future Forecast
     def predict_future(days=30):
-        future_inputs = X_test[-1]  # Start with the last known data
+        future_inputs = X_test[-1]
         future_predictions = []
 
-    for _ in range(days):
-        next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
-        
-        # Ensure predicted values are mapped to the correct indices (Close & Volume)
-        next_pred_filled = np.zeros((1, len(feature_columns)))  # Create a dummy row
-        next_pred_filled[:, [3, 4]] = next_pred  # Insert predictions into Close & Volume columns
-        
-        # Shift input for next prediction
-        future_inputs = np.concatenate([future_inputs[1:], next_pred_filled], axis=0)
-        future_predictions.append(next_pred[0])
+        for _ in range(days):
+            next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
+            next_pred_scaled = np.concatenate([future_inputs[1:], next_pred.reshape(1, -1)], axis=0)
+            future_inputs = next_pred_scaled
+            future_predictions.append(next_pred[0])
 
-    future_predictions = np.array(future_predictions)
+        future_predictions = np.array(future_predictions)
+        dummy_features = np.zeros((future_predictions.shape[0], len(feature_columns)))
+        dummy_features[:, [3, 4]] = future_predictions
+        future_predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]
 
-    # Convert predictions back to original scale
-    dummy_features = np.zeros((future_predictions.shape[0], len(feature_columns)))
-    dummy_features[:, [3, 4]] = future_predictions  # Insert Close & Volume
-    future_predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]
-
-    return future_predictions
+        return future_predictions
 
     # Streamlit UI: Forecast Window
     forecast_days = st.selectbox("📅 Select Forecast Period", [7, 15, 30, 90, 180])
     future_preds = predict_future(forecast_days)
 
-    # Generate Future Dates
+    # Generate future dates
     future_dates = pd.date_range(start=df['date'].iloc[-1] + timedelta(days=1), periods=forecast_days)
 
-    # Plot Results
+    # Plot results
     st.subheader("📊 Stock Price Trend (Actual vs Predicted)")
     fig, ax = plt.subplots(figsize=(10,5))
     ax.plot(actual_prices[:, 0], label="Actual Close Price", color='blue')
@@ -131,7 +124,7 @@ if uploaded_file:
     ax.legend()
     st.pyplot(fig)
 
-    # Display Forecast Table
+    #Display forecast table
     predictions_df = pd.DataFrame(future_preds, columns=['Close Price', 'Volume'])
     predictions_df.insert(0, 'Date', future_dates)
     
