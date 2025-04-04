@@ -23,7 +23,7 @@ forecast_days = st.sidebar.radio("📅 Forecast Window", [7, 15, 30, 90, 180], i
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    df['Date'] = pd.to_datetime(df['Date'])
+    df['Date'] = pd.to_datetime(df['Date'], utc=True)  # Fix applied
     df.sort_values('Date', inplace=True)
 
     # Display Raw Data
