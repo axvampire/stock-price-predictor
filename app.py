@@ -91,18 +91,25 @@ if uploaded_file:
 
     # Future Forecast
     def predict_future(days=30):
-        future_inputs = X_test[-1]
+        future_inputs = X_test[-1]  # Start with the last known data
         future_predictions = []
 
         for _ in range(days):
             next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
-            next_pred_scaled = np.concatenate([future_inputs[1:], next_pred.reshape(1, -1)], axis=0)
-            future_inputs = next_pred_scaled
+
+            # Ensure predicted values are mapped to the correct indices (Close & Volume)
+            next_pred_filled = np.zeros((1, len(feature_columns)))  # Create a row with 5 columns
+            next_pred_filled[:, [3, 4]] = next_pred  # Insert predictions into Close & Volume columns
+
+            # Shift input for next prediction
+            future_inputs = np.vstack([future_inputs[1:], next_pred_filled])  # Stack vertically
             future_predictions.append(next_pred[0])
 
         future_predictions = np.array(future_predictions)
+
+        # Convert predictions back to original scale
         dummy_features = np.zeros((future_predictions.shape[0], len(feature_columns)))
-        dummy_features[:, [3, 4]] = future_predictions
+        dummy_features[:, [3, 4]] = future_predictions  # Insert Close & Volume
         future_predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]
 
         return future_predictions
