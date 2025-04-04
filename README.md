@@ -14,10 +14,7 @@ This Streamlit app allows users to upload stock data (CSV) and uses Deep Learnin
 - Fully Deployable on Render (With tensorflow-cpu for performance)
 
 **HOW TO RUN:**
-
-Access the link https://stock-price-predictor-4lgt.onrender.com
-
-I recommend using the TSLA.csv dataset which is 201.1KB in size. A bigger dataset will take a long time to compute on Render.com, unless you run on a more powerfull device. Or use datasets from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
+I recommend using app.py on your own device, however, if not possible access the link https://stock-price-predictor-4lgt.onrender.com and the TSLA.csv dataset which is 201.1KB in size. A bigger dataset will take a longer time to compute on Render.com. Or use datasets from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
 
 *To note:
 Render is a free instance which will spin down with inactivity, requests can be delayed by 50 seconds or more.
