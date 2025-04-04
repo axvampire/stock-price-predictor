@@ -93,31 +93,44 @@ if uploaded_file:
     st.pyplot(fig)
 
     # --- Future Prediction ---
-    st.subheader(f"Future Stock Price Prediction for {forecast_days} Days")
+st.subheader(f"Future Stock Price Prediction for {forecast_days} Days")
 
-    def predict_future(days=30):
-        future_inputs = X_test[-1]  # Last known sequence
-        future_predictions = []
+def predict_future(days=30):
+    future_inputs = X_test[-1]  # Last known sequence
+    future_predictions = []
 
-        for _ in range(days):
-            next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
-            next_pred_scaled = np.concatenate([future_inputs[1:], next_pred.reshape(1, -1)], axis=0)
-            future_inputs = next_pred_scaled
-            future_predictions.append(next_pred[0,0])
+    for _ in range(days):
+        next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
+        next_pred_scaled = np.concatenate([future_inputs[1:], next_pred.reshape(1, -1)], axis=0)
+        future_inputs = next_pred_scaled
+        future_predictions.append(next_pred[0])  # Predicts both Close & Volume
 
-        # Convert predictions back to actual values
-        future_predictions = scaler.inverse_transform(
-            np.concatenate([np.tile(X_test[-1, -1, :-1], (days, 1)), np.array(future_predictions).reshape(-1,1)], axis=1)
-        )[:, 3]
+    # Convert predictions back to actual values
+    future_predictions = scaler.inverse_transform(
+        np.concatenate([np.tile(X_test[-1, -1, :-1], (days, 1)), np.array(future_predictions)], axis=1)
+    )[:, [3, 4]]  # Get Close & Volume (Columns: 3 = Close, 4 = Volume)
 
-        return future_predictions
+    return future_predictions
 
-    future_preds = predict_future(forecast_days)
+future_preds = predict_future(forecast_days)
 
-    # Plot future predictions
-    fig, ax = plt.subplots(figsize=(10,5))
-    ax.plot(range(len(future_preds)), future_preds, label=f"Next {forecast_days} Days", color='green')
-    ax.set_xlabel("Days Ahead")
-    ax.set_ylabel("Predicted Stock Price")
-    ax.legend()
-    st.pyplot(fig)
+# Generate Future Dates
+future_dates = pd.date_range(start=df['Date'].iloc[-1], periods=forecast_days + 1, freq='D')[1:]
+
+# Create DataFrame for Display
+predictions_df = pd.DataFrame(future_preds, columns=['Close Price', 'Volume'])
+predictions_df.insert(0, 'Date', future_dates)
+
+# Show Graph
+st.subheader("📊 Stock Price Trend (Actual vs Predicted)")
+fig, ax = plt.subplots(figsize=(10,5))
+ax.plot(actual_prices, label="Actual Prices", color='blue')
+ax.plot(predictions, label="Predicted Prices", color='orange')
+ax.set_xlabel("Time")
+ax.set_ylabel("Stock Price")
+ax.legend()
+st.pyplot(fig)
+
+# Show Table Below Graph
+st.subheader("📋 Predicted Stock Prices & Volume")
+st.write(predictions_df)
