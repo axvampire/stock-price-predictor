@@ -96,6 +96,10 @@ if uploaded_file:
 st.subheader(f"Future Stock Price Prediction for {forecast_days} Days")
 
 def predict_future(days=30):
+    if 'X_test' not in globals():
+        st.error("Error: Model not trained yet. Please upload data first.")
+        return None
+
     future_inputs = X_test[-1]  # Last known sequence
     future_predictions = []
 
@@ -108,7 +112,7 @@ def predict_future(days=30):
     # Convert predictions back to actual values
     future_predictions = scaler.inverse_transform(
         np.concatenate([np.tile(X_test[-1, -1, :-1], (days, 1)), np.array(future_predictions)], axis=1)
-    )[:, [3, 4]]  # Get Close & Volume (Columns: 3 = Close, 4 = Volume)
+    )[:, [3, 4]]  # Get Close & Volume
 
     return future_predictions
 
