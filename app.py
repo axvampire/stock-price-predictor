@@ -91,8 +91,8 @@ if uploaded_file:
 
     # Future Forecast
     def predict_future(days=30):
-    future_inputs = X_test[-1]  # Start with the last known data
-    future_predictions = []
+        future_inputs = X_test[-1]  # Start with the last known data
+        future_predictions = []
 
     for _ in range(days):
         next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
