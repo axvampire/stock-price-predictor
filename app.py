@@ -6,134 +6,116 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler
+from datetime import timedelta
 
-# Streamlit UI
+# --- Streamlit UI ---
 st.title("📈 Stock Price Predictor (LSTM)")
 
-uploaded_file = st.sidebar.file_uploader("Upload Stock Data (CSV)", type=['csv'])
-
-# UI for Hyperparameter Tuning
-st.sidebar.header("🔧 Model Settings")
-lstm_units = st.sidebar.slider("LSTM Units", min_value=32, max_value=256, value=64, step=16)
-dropout_rate = st.sidebar.slider("Dropout Rate", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
-epochs = st.sidebar.slider("Training Epochs", min_value=5, max_value=50, value=10, step=5)
-batch_size = st.sidebar.slider("Batch Size", min_value=8, max_value=64, value=64, step=8)
-
-forecast_days = st.sidebar.radio("📅 Forecast Window", [7, 15, 30, 90, 180], index=2)
+# --- Upload File ---
+uploaded_file = st.file_uploader("Upload Stock Data (CSV)", type=['csv'])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    df['Date'] = pd.to_datetime(df['Date'], utc=True)  # Fix applied
-    df.sort_values('Date', inplace=True)
+    
+    # Convert Date column (Fix potential timezone warnings)
+    df['Date'] = pd.to_datetime(df['Date'], utc=True)
+    
+    # Ensure correct column names
+    df.columns = df.columns.str.lower()
+    
+    # Select Features
+    feature_columns = ['open', 'high', 'low', 'close', 'volume']
+    
+    if not all(col in df.columns for col in feature_columns):
+        st.error("Missing required columns: Open, High, Low, Close, Volume")
+        st.stop()
+    
+    df = df[['date'] + feature_columns]
+    df.sort_values('date', inplace=True)
 
+    # --- Normalize Data ---
+    scaler = MinMaxScaler()
+    scaled_data = scaler.fit_transform(df[feature_columns])
 
-    # Display Raw Data
-    st.subheader("Raw Data")
-    st.write(df.tail())
+    # --- Prepare LSTM Training Data ---
+    lookback = 60  # Days of history for LSTM
+    X, y = [], []
 
-    # Select important features
-    feature_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-    data = df[feature_columns].values  # Using multiple features
+    for i in range(lookback, len(scaled_data)):
+        X.append(scaled_data[i - lookback:i])
+        y.append(scaled_data[i, [3, 4]])  # Predicting Close & Volume
 
-    # Normalize the data
-    scaler = MinMaxScaler(feature_range=(0,1))
-    data_scaled = scaler.fit_transform(data)
+    X, y = np.array(X), np.array(y)
 
-    # Create sequences
-    def create_sequences(data, lookback=60):
-        X, y = [], []
-        for i in range(len(data) - lookback):
-            X.append(data[i:i+lookback])
-            y.append(data[i+lookback, 3])  # Predicting Close price (index 3)
-        return np.array(X), np.array(y)
-
-    lookback = 60
-    X, y = create_sequences(data_scaled, lookback)
-
-    # Split into training and test sets
+    # Split Data
     train_size = int(len(X) * 0.8)
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
 
-    # Build an optimized LSTM model
+    # --- Build LSTM Model ---
     model = Sequential([
         LSTM(50, return_sequences=True, input_shape=(lookback, len(feature_columns))),
         Dropout(0.2),
         LSTM(50, return_sequences=False),
         Dropout(0.2),
-        Dense(2)  # Predicts Close & Volume
+        Dense(2)  # Predicting Close & Volume
     ])
-
-
+    
     model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Train the model
-    st.text("Training the optimized LSTM model... (This may take a few minutes)")
-    model.fit(X_train, y_train, epochs=10, batch_size=64, verbose=1)
+    # Train Model
+    model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=1)
 
-    # Make predictions
+    # --- Make Predictions ---
     predictions = model.predict(X_test)
-    predictions = scaler.inverse_transform(
-        np.concatenate([X_test[:, -1, :], predictions.reshape(-1,1)], axis=1)
-    )[:, 3]  # Get only the Close price
+    
+    # Convert Predictions Back to Original Scale
+    dummy_features = np.zeros((len(predictions), len(feature_columns)))
+    dummy_features[:, [3, 4]] = predictions  # Insert only Close & Volume
+    predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]
 
-    # Prepare actual values for comparison
-    actual_prices = scaler.inverse_transform(
-        np.concatenate([X_test[:, -1, :], y_test.reshape(-1,1)], axis=1)
-    )[:, 3]
+    # Convert y_test Back to Original Scale
+    dummy_features[:, [3, 4]] = y_test
+    actual_prices = scaler.inverse_transform(dummy_features)[:, [3, 4]]
 
-    # Plot historical vs predicted prices
-    st.subheader("Stock Price Prediction")
+    # --- Future Forecast ---
+    def predict_future(days=30):
+        future_inputs = X_test[-1]
+        future_predictions = []
+
+        for _ in range(days):
+            next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
+            next_pred_scaled = np.concatenate([future_inputs[1:], next_pred.reshape(1, -1)], axis=0)
+            future_inputs = next_pred_scaled
+            future_predictions.append(next_pred[0])
+
+        future_predictions = np.array(future_predictions)
+        dummy_features = np.zeros((future_predictions.shape[0], len(feature_columns)))
+        dummy_features[:, [3, 4]] = future_predictions
+        future_predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]
+
+        return future_predictions
+
+    # --- Streamlit UI: Forecast Window ---
+    forecast_days = st.selectbox("📅 Select Forecast Period", [7, 15, 30, 90, 180])
+    future_preds = predict_future(forecast_days)
+
+    # Generate Future Dates
+    future_dates = pd.date_range(start=df['date'].iloc[-1] + timedelta(days=1), periods=forecast_days)
+
+    # --- Plot Results ---
+    st.subheader("📊 Stock Price Trend (Actual vs Predicted)")
     fig, ax = plt.subplots(figsize=(10,5))
-    ax.plot(actual_prices, label="Actual Prices", color='blue')
-    ax.plot(predictions, label="Predicted Prices", color='orange')
+    ax.plot(actual_prices[:, 0], label="Actual Close Price", color='blue')
+    ax.plot(predictions[:, 0], label="Predicted Close Price", color='orange')
     ax.set_xlabel("Time")
     ax.set_ylabel("Stock Price")
     ax.legend()
     st.pyplot(fig)
 
-    # Future Prediction
-st.subheader(f"Future Stock Price Prediction for {forecast_days} Days")
-
-def predict_future(days=30):
-    future_inputs = X_test[-1]  # Last known sequence
-    future_predictions = []
-
-    for _ in range(days):
-        next_pred = model.predict(future_inputs.reshape(1, lookback, len(feature_columns)))
-        next_pred_scaled = np.concatenate([future_inputs[1:], next_pred.reshape(1, -1)], axis=0)
-        future_inputs = next_pred_scaled
-        future_predictions.append(next_pred[0])  # Predicts both Close & Volume
-
-    # Convert predictions back to original scale
-    future_predictions = np.array(future_predictions)
-
-    # Ensure correct shape before inverse transformation
-    dummy_features = np.zeros((future_predictions.shape[0], len(feature_columns)))  # Create placeholder features
-    dummy_features[:, [3, 4]] = future_predictions  # Only insert Close & Volume
-    future_predictions = scaler.inverse_transform(dummy_features)[:, [3, 4]]  # Extract Close & Volume after inverse transform
-
-    return future_predictions
-
-future_preds = predict_future(forecast_days)
-
-# Generate Future Dates
-future_dates = pd.date_range(start=df['Date'].iloc[-1], periods=forecast_days + 1, freq='D')[1:]
-
-# Create DataFrame for Display
-predictions_df = pd.DataFrame(future_preds, columns=['Close Price', 'Volume'])
-predictions_df.insert(0, 'Date', future_dates)
-
-# Show Graph
-st.subheader("📊 Stock Price Trend (Actual vs Predicted)")
-fig, ax = plt.subplots(figsize=(10,5))
-ax.plot(actual_prices, label="Actual Prices", color='blue')
-ax.plot(predictions, label="Predicted Prices", color='orange')
-ax.set_xlabel("Time")
-ax.set_ylabel("Stock Price")
-ax.legend()
-st.pyplot(fig)
-
-# Show Table Below Graph
-st.subheader("📋 Predicted Stock Prices & Volume")
-st.write(predictions_df)
+    # --- Display Forecast Table ---
+    predictions_df = pd.DataFrame(future_preds, columns=['Close Price', 'Volume'])
+    predictions_df.insert(0, 'Date', future_dates)
+    
+    st.subheader("📋 Predicted Stock Prices & Volume")
+    st.write(predictions_df)
