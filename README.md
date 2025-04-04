@@ -17,7 +17,8 @@ This Streamlit app allows users to upload stock data (CSV) and uses Deep Learnin
 
 Access the link https://stock-price-predictor-4lgt.onrender.com
 
-Upload .csv file with stock market data from this repository (ACGL or AMZN) or download a dataset from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
+Upload .csv file with stock market data from this repository from https://www.kaggle.com/datasets/paultimothymooney/stock-market-data
+Or use the uploaded TSLA.csv dataset
 
 *To note:
 Render is a free instance which will spin down with inactivity, requests can be delayed by 50 seconds or more.
